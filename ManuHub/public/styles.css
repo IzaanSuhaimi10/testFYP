@@ -1,0 +1,199 @@
+/* Global Styles */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh; /* Ensure body takes up full height */
+    overflow-x: hidden; /* Disable horizontal scroll */
+}
+
+/* Styling for the new hero section */
+.hero-section {
+    text-align: center;
+    margin-top: 50px;
+    margin-bottom: 20px;
+}
+
+.hero-section h1 {
+    font-size: 36px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.hero-section p {
+    font-size: 18px;
+    color: #555;
+}
+
+/* Search Bar Styling */
+.search-bar {
+    text-align: center;
+    margin-top: 20px;
+    margin-bottom: 50px;
+}
+
+.search-bar form {
+    display: inline-block;
+    background-color: #fff;
+    padding: 5px 10px;
+    border-radius: 20px;
+}
+
+.search-bar input {
+    padding: 8px;
+    border: none;
+    border-radius: 20px;
+    margin-right: 10px;
+    width: 300px;
+}
+
+.search-bar button {
+    padding: 8px 20px;
+    border: none;
+    background-color: #5c6bc0;
+    color: white;
+    border-radius: 20px;
+    cursor: pointer;
+}
+
+.search-bar button:hover {
+    background-color: #3f51b5;
+}
+
+/* Styling for homepage.php only (manuscript-collection) */
+.manuscript-collection {
+    display: flex;  /* Use flexbox to display items in a row */
+    justify-content: space-between;  /* Distribute items evenly */
+    align-items: center;  /* Vertically center items */
+    width: 100%;  /* Ensure the collection takes up full width */
+    overflow-x: auto; /* Allow horizontal scrolling if the items exceed the width */
+    gap: 20px;  /* Space between items */
+    margin: 0 auto;  /* Center the grid */
+    padding: 10px;  /* Padding around the collection */
+    box-sizing: border-box; /* Ensure padding and borders are included */
+}
+
+.manuscript-item {
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease-in-out;
+    text-align: center;  /* Center the text inside the box */
+    min-width: 200px;  /* Minimum width for each item */
+    flex: 0 0 auto; /* Prevent the items from stretching or shrinking */
+}
+
+.manuscript-item h3, .manuscript-item p {
+    margin: 10px 0;  /* Add spacing between elements */
+}
+
+.manuscript-item:hover {
+    transform: translateY(-10px);
+}
+
+.manuscript-item img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+/* General Manuscript Collection Styling for manuscript_list.php */
+.manuscript-list-collection {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* 2 items per row */
+    gap: 20px; /* Space between items */
+    margin: 0 auto; /* Center the grid */
+    width: 100%; /* Use full width to avoid overflow */
+    max-width: 1200px; /* Maximum width for larger screens */
+    box-sizing: border-box; /* Include padding and border in element's total width */
+    padding: 10px; /* Add some padding */
+}
+
+/* Adjust the see more container to be fixed at the bottom */
+.see-more-container {
+    text-align: center;
+    margin-top: 50px; /* Increased top margin for better spacing */
+    margin-bottom: 80px; /* Increased bottom margin to avoid overlap with footer */
+}
+
+.see-more-btn {
+    padding: 10px 30px;
+    background-color: #5c6bc0;
+    color: white;
+    font-size: 16px;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.see-more-btn:hover {
+    background-color: #3f51b5;
+}
+
+/* Pagination Styling */
+.pagination {
+    text-align: center;
+    margin-top: 30px;
+    display: flex;
+    justify-content: center; /* Center pagination buttons */
+    gap: 10px; /* Space between buttons */
+    margin-bottom: 50px; /* Ensure pagination buttons aren't hidden */
+    flex-wrap: wrap; /* Allow buttons to wrap on small screens */
+}
+
+.pagination-btn {
+    padding: 12px 25px;
+    background-color: #5c6bc0;
+    color: white;
+    font-size: 18px;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.pagination-btn:hover {
+    background-color: #3f51b5;
+}
+
+.pagination-btn.active {
+    background-color: #3f51b5;
+}
+
+.pagination-btn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+/* Ensure Pagination Buttons are Not Hidden */
+.pagination {
+    padding: 20px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: center; /* Ensure pagination buttons are centered */
+    gap: 15px;
+}
+
+.pagination-btn {
+    padding: 12px 25px;
+    font-size: 18px;
+    border-radius: 30px;
+}
+
+/* Add responsiveness for small screen sizes */
+@media (max-width: 768px) {
+    .manuscript-collection {
+        flex-direction: column; /* Stack the grid items vertically on small screens */
+        gap: 15px;
+    }
+
+    .manuscript-item {
+        width: 100%; /* Make each item take up the full width */
+    }
+}
