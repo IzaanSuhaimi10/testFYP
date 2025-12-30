@@ -10,6 +10,32 @@ body {
     overflow-x: hidden; /* Disable horizontal scroll */
 }
 
+header {
+    background-color: #333;
+    color: white;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+}
+
+h2 {
+    text-align: center;
+}
+
+header .logo a {
+    text-decoration: none;
+    color: white;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+header .nav-links a {
+    color: white;
+    margin-left: 10px;
+    text-decoration: none;
+    font-size: 16px;
+}
+
 /* Styling for the new hero section */
 .hero-section {
     text-align: center;
@@ -114,11 +140,22 @@ body {
     padding: 10px; /* Add some padding */
 }
 
-/* Adjust the see more container to be fixed at the bottom */
+/* Footer Styles */
+footer {
+    text-align: center;
+    padding: 20px;
+    background-color: #333;
+    color: white;
+    position: relative;
+    width: 100%;
+    margin-top: auto; /* Push footer to bottom */
+}
+
+/* Styling for the See More Button */
 .see-more-container {
     text-align: center;
-    margin-top: 50px; /* Increased top margin for better spacing */
-    margin-bottom: 80px; /* Increased bottom margin to avoid overlap with footer */
+    margin-top: 30px;
+    margin-bottom: 50px;
 }
 
 .see-more-btn {

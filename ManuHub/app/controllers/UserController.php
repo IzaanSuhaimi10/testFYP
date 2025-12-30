@@ -67,44 +67,63 @@ class UserController extends Controller {
 
 
 
-    // Login user
-    public function login() {
+  public function login() {
+        if (session_status() === PHP_SESSION_NONE) { session_start(); }
+
         if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-            $email = $_POST['email'];
-            $password = $_POST['password'];
+            $email = trim($_POST['email']);
+            $password = trim($_POST['password']);
 
             $database = new Database();
             $db = $database->getConnection();
             $userModel = $this->loadModel('User', $db);
 
-            // Get user data from the model
             $user = $userModel->login($email, $password);
 
             if ($user) {
-                // Login successful, set session variables
-                session_start();
-                $_SESSION['user_id'] = $user['id'];
-                $_SESSION['role'] = $user['role'];
+                // REGENERATE ID to prevent session fixation
+                session_regenerate_id(true);
 
-                // Redirect based on user role
-                if ($user['role'] === 'admin') {
-                    header("Location: /manuhub/app/views/admin_dashboard.php");
-                } elseif ($user['role'] === 'expert') {
-                    header("Location: /manuhub/app/views/expert_dashboard.php");
+                // --- FIX IS HERE: Use 'user_id' instead of 'id' ---
+                $_SESSION['user_id'] = $user['user_id']; 
+                
+                $_SESSION['username'] = $user['username'];
+                $_SESSION['role'] = strtolower($user['role']); // Force lowercase
+
+                // Log the action
+                require_once "../app/models/Logger.php";
+                Logger::log("LOGIN", "User " . $user['username'] . " logged in.");
+
+                if ($_SESSION['role'] === 'admin') {
+                    header("Location: index.php?action=admin_dashboard");
+                    exit();
+                } elseif ($_SESSION['role'] === 'expert') {
+                    header("Location: index.php"); 
+                    exit();
                 } else {
-                    header("Location: /manuhub/app/views/user_dashboard.php");
-                    
+                    header("Location: index.php");
+                    exit();
                 }
-                exit();
             } else {
-                // Invalid login, show error message
                 $this->loadView('login', ['error' => 'Invalid credentials']);
             }
         }
-
-        // Load login view
         $this->loadView('login');
     }
+
+
+    // Logout user (latest)
+    public function logout() {
+        session_start();
+        session_unset();  // Unset all session variables
+        session_destroy();  // Destroy the session
+
+        // Redirect to homepage after logging out
+        header("Location: /manuhub/public");
+        exit();
+    }
+
+
 
     // Admin adding an expert (for admin role)
     public function addExpert() {

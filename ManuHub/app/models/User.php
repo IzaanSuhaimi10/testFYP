@@ -20,6 +20,7 @@ class User {
     }
 
 
+   
     // Login user
     public function login($email, $password) {
         $query = "SELECT * FROM " . $this->table . " WHERE email = :email LIMIT 1";
@@ -29,12 +30,12 @@ class User {
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
         // Debugging: Check what password is being fetched from the DB
-        echo "DB Password: " . $user['password'] . "<br>";  // Print the password from the DB (hashed)
-        echo "Entered Password: " . $password . "<br>";      // Print the entered password
+        //echo "DB Password: " . $user['password'] . "<br>";  // Print the password from the DB (hashed)
+        //echo "Entered Password: " . $password . "<br>";      // Print the entered password
 
         // Verify password and return user if valid
         $isPasswordValid = password_verify($password, $user['password']);
-        var_dump($isPasswordValid);  // This should return 'bool(true)' if passwords match
+        //var_dump($isPasswordValid);  // This should return 'bool(true)' if passwords match
 
         if ($isPasswordValid) {
             return $user;  // Return user data if login is successful

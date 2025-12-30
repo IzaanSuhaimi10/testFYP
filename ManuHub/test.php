@@ -1,3 +1,4 @@
+
 <?php
 // The password you want to test
 $password = "expert123";  // Example password you want to hash

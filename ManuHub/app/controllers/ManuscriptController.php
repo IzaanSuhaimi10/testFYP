@@ -3,123 +3,169 @@ require_once "../core/Controller.php";
 
 class ManuscriptController extends Controller {
 
-    // Display all manuscripts
     public function index() {
         $database = new Database();
         $db = $database->getConnection();
         $manuscriptModel = $this->loadModel('Manuscript', $db);
-
-        // Fetch all manuscripts
         $stmt = $manuscriptModel->getAllManuscripts();
         $manuscripts = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Load the manuscript list view and pass data
         $this->loadView('homepage', ['manuscripts' => $manuscripts]);
     }
- 
-    // Search manuscripts by title or author
-    public function search() {
-        if (isset($_POST['search'])) {
-            $searchTerm = $_POST['search'];
-            $database = new Database();
-            $db = $database->getConnection();
-            $manuscriptModel = $this->loadModel('Manuscript', $db);
 
-            // Fetch searched manuscripts
-            $stmt = $manuscriptModel->searchManuscripts($searchTerm);
-            $manuscripts = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            // Load the manuscript list view with search results
-            $this->loadView('homepage', ['manuscripts' => $manuscripts]);
-        }
-    }
-
-    // Display all manuscripts with pagination
+    // Display all manuscripts with pagination (OPTIMIZED)
     public function manuscriptList() {
-        // Get the current page number from the URL (default is page 1)
-        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-        $limit = 10;  // Number of manuscripts per page
-        $offset = ($page - 1) * $limit;  // Calculate offset for SQL query
-
         $database = new Database();
         $db = $database->getConnection();
         $manuscriptModel = $this->loadModel('Manuscript', $db);
 
-        // Fetch manuscripts with limit and offset for pagination
-        $stmt = $manuscriptModel->getManuscriptsWithPagination($limit, $offset);
-        $manuscripts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+        $limit = 20; 
+        $offset = ($page - 1) * $limit;
+        $search = $_GET['search'] ?? null;
 
-        // Fetch the total number of manuscripts to calculate total pages
-        $totalManuscripts = $manuscriptModel->getTotalManuscripts();
-        $totalPages = ceil($totalManuscripts / $limit);  // Total pages for pagination
+        if ($search) {
+            // [NEW] Use Efficient SQL Search
+            $stmt = $manuscriptModel->searchManuscriptsWithPagination($search, $limit, $offset);
+            $manuscripts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $totalManuscripts = $manuscriptModel->getTotalManuscripts($search);
+        } else {
+            // Standard Pagination
+            $stmt = $manuscriptModel->getManuscriptsWithPagination($limit, $offset);
+            $manuscripts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $totalManuscripts = $manuscriptModel->getTotalManuscripts();
+        }
 
-        // Load the manuscript list view and pass data
+        $totalPages = ceil($totalManuscripts / $limit);
+
         $this->loadView('manuscript_list', [
             'manuscripts' => $manuscripts,
             'current_page' => $page,
-            'total_pages' => $totalPages
+            'total_pages' => $totalPages,
+            'search' => $search
         ]);
     }
-
-    // [Iz'aan] Show Metadata Page
+  
+  // -------------------------------------------------------------
+    // 1. METADATA FUNCTION (THE LOGIC FIX)
+    // -------------------------------------------------------------
     public function metadata() {
-
-        // Get ID from URL (e.g., &id=1)
         $id = $_GET['id'] ?? null;
-        
-        if (!$id) {
-            // If no ID, go back to list
-            header("Location: index.php?action=manuscript_list"); 
-            exit(); 
-        }
+        if (!$id) { header("Location: index.php"); exit(); }
 
         $database = new Database();
         $db = $database->getConnection();
         $manuscriptModel = $this->loadModel('Manuscript', $db);
 
-        // Fetch data
+        // 1. Get Main Manuscript
         $manuscript = $manuscriptModel->getManuscriptById($id);
-        $sources = $manuscriptModel->getSources($id);
 
-        // Load view
-        $this->loadView('metadata', [
-            'manuscript' => $manuscript,
-            'sources' => $sources
-        ]);
-    }
+        // 2. CHECK DB: Get EVERYTHING (Citations + Related Works)
+        // Make sure your Model's getRelatedWorks() does NOT have "WHERE type='related'"
+        $allWorks = $manuscriptModel->getRelatedWorks($id);
 
-    // [Iz'aan] Web Scraper Logic
-    public function addSource() {
-        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-            $id = $_POST['manuscript_id'];
-            $url = $_POST['url'];
-            $category = $_POST['category'];
-            
-            // --- SCRAPER START ---
-            $html = @file_get_contents($url); 
-            $pageTitle = $url; // Default title is the URL itself
-            
-            // Try to find the <title> tag in the HTML
-            if ($html) {
-                $doc = new DOMDocument();
-                @$doc->loadHTML($html);
-                $titles = $doc->getElementsByTagName('title');
-                if ($titles->length > 0) {
-                    $pageTitle = $titles->item(0)->nodeValue;
+        // 3. SMART CHECK: Do we actually have 'related' works?
+        $hasRelatedWorks = false;
+        if (!empty($allWorks)) {
+            foreach ($allWorks as $work) {
+                if (isset($work['type']) && $work['type'] == 'related') {
+                    $hasRelatedWorks = true;
+                    break;
                 }
             }
-            // --- SCRAPER END ---
-
-            $database = new Database();
-            $db = $database->getConnection();
-            $manuscriptModel = $this->loadModel('Manuscript', $db);
-            
-            $manuscriptModel->addSource($id, $category, $url, $pageTitle);
-            
-            // Go back to the metadata page
-            header("Location: index.php?action=metadata&id=" . $id);
-            exit();
         }
+
+        // 4. IF NO RELATED WORKS FOUND: Run the Scraper!
+        // (Even if we have 50 citations, this will still run because $hasRelatedWorks is false)
+        if (!$hasRelatedWorks) {
+            set_time_limit(300); 
+            require_once "../app/models/ScraperEngine.php";
+            $scraper = new ScraperEngine();
+            
+            // Run Broad Discovery for Related Works
+            $results = $scraper->discoverRelatedWorks($manuscript['Title']);
+
+            if (!empty($results)) {
+                foreach ($results as $work) {
+                    $manuscriptModel->addRelatedWork(
+                        $id, 
+                        $work['category'], 
+                        $work['url'], 
+                        $work['title'], 
+                        'related' // Explicitly mark as 'related'
+                    );
+                }
+                // Reload data so the tab populates immediately
+                $allWorks = $manuscriptModel->getRelatedWorks($id);
+            }
+        }
+
+        // 5. Get Connections
+        $subject = $manuscript['Subject'] ?? ''; 
+        $connectedManuscripts = $manuscriptModel->getConnectedManuscripts($id, $subject);
+
+        // 6. Load View
+        $this->loadView('metadata', [
+            'manuscript' => $manuscript,
+            'related_works' => $allWorks, 
+            'connections' => $connectedManuscripts
+        ]);
+    }
+    
+    // [FIXED] AUTO DISCOVER FUNCTION
+    public function autoDiscover() {
+        if (session_status() === PHP_SESSION_NONE) { session_start(); }
+
+        $id = $_GET['id'] ?? null;
+        $source = $_GET['source'] ?? 'related';
+
+        if (!$id) { header("Location: index.php"); exit(); }
+
+        $database = new Database();
+        $db = $database->getConnection();
+
+        // [FIX 1] Explicitly load Manuscript to prevent "Class not found" error
+        require_once "../app/models/Manuscript.php";
+        $manuscriptModel = new Manuscript($db); 
+        
+        require_once "../app/models/ScraperEngine.php"; 
+        $scraper = new ScraperEngine();
+
+        $manuscript = $manuscriptModel->getManuscriptById($id);
+        $titleToSearch = $manuscript['Title'];
+        $subjectToSearch = $manuscript['Subject'] ?? 'Islamic Manuscript'; 
+
+        $links = [];
+        if ($source == 'citation') {
+            $links = $scraper->findCitations($titleToSearch, $subjectToSearch);
+        } else {
+            $links = $scraper->discoverRelatedWorks($titleToSearch);
+        }
+
+        // Save Results
+        $count = 0;
+        if (!empty($links)) {
+            foreach ($links as $link) {
+                if ($count >= 6) break;
+
+                $type = ($source == 'citation') ? 'citation' : 'related';
+
+                // [FIX 2] Safety Check for Title
+                $safeTitle = !empty($link['title']) ? $link['title'] : 'Untitled Citation';
+                
+                $manuscriptModel->addRelatedWork(
+                    $id, 
+                    $link['category'], 
+                    $link['url'], 
+                    $safeTitle, 
+                    $type
+                );
+                $count++;
+            }
+        }
+
+        $tabHash = ($source == 'citation') ? '#citation' : '#related-work';
+        header("Location: index.php?action=metadata&id=" . $id . "&msg=found_" . $count . $tabHash);
+        exit();
     }
 }
 ?>
