@@ -127,6 +127,23 @@ switch ($action) {
         $adminController->clearLogs();
         break;
 
+    // Admin Manuscript Verification
+case 'admin_verify_manuscripts':
+    $admin = new AdminController();
+    $admin->verifyManuscripts();
+    break;
+
+// Admin Researcher Verification
+case 'admin_verification_users':
+    $admin = new AdminController();
+    $admin->verifyUsers();
+    break;
+
+case 'admin_approve_user':
+    $admin = new AdminController();
+    $admin->approveUser();
+    break;
+
     // --- EXPERT ROUTES ---
     case 'expert_dashboard':
         $expert = new ExpertController();
@@ -172,6 +189,16 @@ switch ($action) {
     case 'expert_verification_flags':
         $expert = new ExpertController(); 
         $expert->verifyFlags();
+    break;
+
+    case 'expert_verification_users':
+    $expert = new ExpertController();
+    $expert->verifyUsers();
+    break;
+
+case 'expert_approve_user':
+    $expert = new ExpertController();
+    $expert->approveUser();
     break;
   
     default:

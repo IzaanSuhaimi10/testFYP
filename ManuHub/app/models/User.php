@@ -8,41 +8,45 @@ class User {
     }
 
     // Register a new user
-    public function register($username, $email, $password, $role) {
-        $query = "INSERT INTO " . $this->table . " (username, email, password, role) 
-                VALUES (:username, :email, :password, :role)";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':username', $username);
-        $stmt->bindParam(':email', $email);
-        $stmt->bindParam(':password', $password);  // Insert the already hashed password
-        $stmt->bindParam(':role', $role);  // Insert role
-        return $stmt->execute();
-    }
+   public function register($username, $email, $password, $role, $docPath = null) {
+    // We add 'status' and 'verification_doc' to the insert query
+    // Default status is 'pending' as defined in the DB schema
+    $query = "INSERT INTO " . $this->table . " (username, email, password, role, verification_doc, status) 
+              VALUES (:username, :email, :password, :role, :doc, 'pending')";
+    
+    $stmt = $this->conn->prepare($query);
+    
+    $stmt->bindParam(':username', $username);
+    $stmt->bindParam(':email', $email);
+    $stmt->bindParam(':password', $password); // Hashed password from Controller
+    $stmt->bindParam(':role', $role);
+    $stmt->bindParam(':doc', $docPath); // The filename saved to /uploads/verify/
+    
+    return $stmt->execute();
+}
 
 
    
     // Login user
     public function login($email, $password) {
-        $query = "SELECT * FROM " . $this->table . " WHERE email = :email LIMIT 1";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':email', $email);
-        $stmt->execute();
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    $query = "SELECT * FROM " . $this->table . " WHERE email = :email LIMIT 1";
+    $stmt = $this->conn->prepare($query);
+    $stmt->bindParam(':email', $email);
+    $stmt->execute();
+    
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        // Debugging: Check what password is being fetched from the DB
-        //echo "DB Password: " . $user['password'] . "<br>";  // Print the password from the DB (hashed)
-        //echo "Entered Password: " . $password . "<br>";      // Print the entered password
-
-        // Verify password and return user if valid
-        $isPasswordValid = password_verify($password, $user['password']);
-        //var_dump($isPasswordValid);  // This should return 'bool(true)' if passwords match
-
-        if ($isPasswordValid) {
-            return $user;  // Return user data if login is successful
+    // 1. Check if the user exists (prevents the 'Trying to access array offset' warning)
+    if ($user) {
+        // 2. Verify password only if user was found
+        if (password_verify($password, $user['password'])) {
+            return $user;  // Successful login
         }
-
-        return null;  // Invalid login
     }
+
+    // 3. Return null if email doesn't exist OR password is wrong
+    return null; 
+}
 
 
     // Get user by ID

@@ -19,35 +19,34 @@ class AdminController extends Controller {
     $this->checkAuth();
     $db = (new Database())->getConnection();
 
-    // Core Counts
+    // Existing core counts
     $userCount = $db->query("SELECT COUNT(*) FROM users")->fetchColumn();
     $msLiveCount = $db->query("SELECT COUNT(*) FROM manuscripts")->fetchColumn();
     
-    // Pending Workload for Experts
+    // Workload counts
     $pendingMs = $db->query("SELECT COUNT(*) FROM manuscripts_submission WHERE status = 'pending'")->fetchColumn();
     $pendingRw = $db->query("SELECT COUNT(*) FROM related_works_submission WHERE status = 'pending'")->fetchColumn();
     $pendingSug = $db->query("SELECT COUNT(*) FROM metadata_suggestions WHERE status = 'pending'")->fetchColumn();
     $pendingFlags = $db->query("SELECT COUNT(*) FROM content_flags WHERE status = 'pending'")->fetchColumn();
-
-    // Activity Data
-    $latestUsers = $db->query("SELECT * FROM users ORDER BY created_at DESC LIMIT 3")->fetchAll(PDO::FETCH_ASSOC);
-    $latestLogs = $db->query("SELECT * FROM system_logs ORDER BY created_at DESC LIMIT 3")->fetchAll(PDO::FETCH_ASSOC);
+    
+    // NEW: Count pending users specifically for Admin Dashboard
+    $pendingUsers = $db->query("SELECT COUNT(*) FROM users WHERE status = 'pending'")->fetchColumn();
 
     $this->loadView('admin/dashboard', [
+        'session_id' => session_id(),
+        'server_date' => date('d M Y, H:i:s'),
         'user_count' => $userCount,
         'live_ms_count' => $msLiveCount,
-        'pending_total' => ($pendingMs + $pendingRw + $pendingSug + $pendingFlags),
+        'pending_total' => ($pendingMs + $pendingRw + $pendingSug + $pendingFlags + $pendingUsers), // Updated total
         'pending_ms' => $pendingMs,
         'pending_rw' => $pendingRw,
         'pending_sug' => $pendingSug,
         'pending_flags' => $pendingFlags,
-        'latest_users' => $latestUsers,
-        'latest_logs' => $latestLogs,
-        'session_id' => session_id(), // For the profile banner
-        'server_date' => date('d M Y') // For the profile banner
+        'pending_users' => $pendingUsers, // NEW data for alert
+        'latest_users' => $db->query("SELECT * FROM users ORDER BY created_at DESC LIMIT 3")->fetchAll(PDO::FETCH_ASSOC),
+        'latest_logs' => $db->query("SELECT * FROM system_logs ORDER BY created_at DESC LIMIT 3")->fetchAll(PDO::FETCH_ASSOC)
     ]);
 }
-
     // --- 3. MANUSCRIPT OVERSIGHT PAGE ---
    public function manuscripts() {
     $this->checkAuth();
@@ -243,6 +242,90 @@ public function clearLogs() {
         // If anything fails, undo any partial deletions
         $db->rollBack();
         die("Error deleting record: " . $e->getMessage());
+    }
+}
+
+// --- NEW: ADMINISTRATIVE VERIFICATION METHODS ---
+
+public function verifyManuscripts() {
+    $this->checkAuth();
+    $db = (new Database())->getConnection();
+
+    if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+        if (isset($_POST['status']) && is_array($_POST['status'])) {
+            foreach ($_POST['status'] as $id => $newStatus) {
+                $comment = $_POST['comments'][$id] ?? null;
+                $updateStmt = $db->prepare("UPDATE manuscripts_submission SET status = :status, rejection_comment = :comment WHERE id = :id");
+                $updateStmt->execute([':status' => $newStatus, ':comment' => $comment, ':id' => $id]);
+
+                if ($newStatus === 'approved') {
+                    $this->approveManuscriptToLive($db, $id);
+                }
+            }
+        }
+        header("Location: index.php?action=admin_manuscripts&msg=saved");
+        exit();
+    }
+}
+
+private function approveManuscriptToLive($db, $submissionId) {
+    // Logic copied from ExpertController to maintain data flow consistency
+    $stmt = $db->prepare("SELECT * FROM manuscripts_submission WHERE id = :id");
+    $stmt->execute([':id' => $submissionId]);
+    $sub = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($sub) {
+        $check = $db->prepare("SELECT id FROM manuscripts WHERE Title = :t AND Author = :a");
+        $check->execute([':t' => $sub['Title'], ':a' => $sub['Author']]);
+        if($check->rowCount() > 0) return; 
+
+        $sql = "INSERT INTO manuscripts (Title, Description, Location_of_Manuscript, Country, Subject, Call_Number, Author, Language, Genre, file_path, submitted_by, create_dat)
+                VALUES (:title, :desc, :loc, :country, :subject, :call, :author, :lang, :genre, :file, :uid, NOW())";
+        
+        $ins = $db->prepare($sql);
+        $ins->execute([
+            ':title'   => $sub['Title'], 
+            ':desc'    => $sub['Description'], 
+            ':loc'     => $sub['Location_of_Manuscript'],
+            ':country' => $sub['Country'], 
+            ':subject' => $sub['Subject'], 
+            ':call'    => $sub['Call_Number'],
+            ':author'  => $sub['Author'], 
+            ':lang'    => $sub['Language'], 
+            ':genre'   => $sub['Genre'],
+            ':file'    => $sub['file_path'], 
+            ':uid'     => $sub['submitted_by']
+        ]);
+    }
+}
+
+// --- NEW: RESEARCHER ID VERIFICATION ---
+public function verifyUsers() {
+    $this->checkAuth();
+    $db = (new Database())->getConnection();
+    
+    $query = "SELECT * FROM users WHERE status = 'pending' ORDER BY created_at DESC";
+    $list = $db->query($query)->fetchAll(PDO::FETCH_ASSOC);
+
+    $this->loadView('expert/verification_users', ['list' => $list]);
+}
+
+public function approveUser() {
+    $this->checkAuth();
+    $id = $_GET['id'] ?? null;
+    $decision = $_GET['decision'] ?? 'approve';
+
+    if ($id) {
+        $db = (new Database())->getConnection();
+        $newStatus = ($decision === 'approve') ? 'active' : 'inactive';
+        
+        $stmt = $db->prepare("UPDATE users SET status = :status WHERE user_id = :id");
+        if ($stmt->execute([':status' => $newStatus, ':id' => $id])) {
+            require_once "../app/models/Logger.php";
+            Logger::log("USER VERIFICATION", "Admin " . $_SESSION['username'] . " set user #$id to $newStatus");
+            header("Location: index.php?action=admin_users&msg=updated");
+            exit();
+        }
     }
 }
 }

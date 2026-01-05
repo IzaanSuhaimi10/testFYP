@@ -256,20 +256,27 @@ public function submitFlag() {
         $db = $database->getConnection();
 
         $work_id = $_POST['work_id'];
-        $manuscript_id = $_POST['manuscript_id']; // For redirection back
+        $manuscript_id = $_POST['manuscript_id']; 
         $user_id = $_SESSION['user_id'];
         $reason = $_POST['reason'];
+        
+        // --- CHANGE 1: Capture the target type from the form ---
+        // This will be either 'related_work' or 'citation'
+        $target_type = $_POST['target_type'] ?? 'related_work'; 
 
-        $query = "INSERT INTO content_flags (work_id, user_id, reason, status) 
-                  VALUES (:wid, :uid, :reason, 'pending')";
+        // --- CHANGE 2: Update SQL to include the target_type column ---
+        $query = "INSERT INTO content_flags (work_id, user_id, reason, target_type, status) 
+                  VALUES (:wid, :uid, :reason, :ttype, 'pending')";
         
         $stmt = $db->prepare($query);
         $stmt->bindParam(':wid', $work_id);
         $stmt->bindParam(':uid', $user_id);
         $stmt->bindParam(':reason', $reason);
+        
+        // --- CHANGE 3: Bind the new parameter ---
+        $stmt->bindParam(':ttype', $target_type);
 
         if ($stmt->execute()) {
-            // Success: Redirect back to the manuscript with a message
             header("Location: index.php?action=metadata&id=$manuscript_id&msg=flag_received");
             exit();
         } else {
@@ -279,6 +286,6 @@ public function submitFlag() {
         header("Location: index.php?action=login");
         exit();
     }
-    }
+}
 }
 ?>

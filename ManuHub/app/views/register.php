@@ -3,91 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register</title>
-    <link rel="stylesheet" href="../public/register.css">
-
+    <title>Researcher Registration - ManuHub</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; font-family: 'Inter', sans-serif; }
+        .register-card { max-width: 500px; border: none; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+        .btn-primary { background-color: #6d0828; border: none; padding: 12px; font-weight: 600; }
+        .btn-primary:hover { background-color: #4d061c; }
+        .form-label { font-size: 13px; font-weight: 600; color: #555; }
+        .logo-img { width: 100px; border-radius: 10px; margin-bottom: 15px; }
+    </style>
     <script>
-        // Client-side validation for the form
         function validateForm() {
             const username = document.forms["registerForm"]["username"].value;
             const email = document.forms["registerForm"]["email"].value;
             const password = document.forms["registerForm"]["password"].value;
             const confirmPassword = document.forms["registerForm"]["confirm_password"].value;
+            const fileInput = document.forms["registerForm"]["identity_doc"].value;
 
-            // 1. Validate username (should not contain < or > or any tags)
-            const usernameRegex = /<.*?>/;
-            if (usernameRegex.test(username)) {
-                alert("Username cannot contain < or > characters.");
-                return false;
-            }
-
-            // 2. Validate email (basic format check)
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(email)) {
-                alert("Please enter a valid email address.");
-                return false;
-            }
-
-            // 3. Validate password (between 8 and 16 characters long and contains special characters)
-            const passwordLengthRegex = /^.{8,16}$/; // Between 8 to 16 characters
-            const passwordSpecialCharRegex = /^(?=.*[!@#$%^&*(),.?":{}|<>]).*$/; // Contains at least one special character
-
-            if (!passwordLengthRegex.test(password)) {
-                alert("Password must be between 8 and 16 characters long.");
-                return false;
-            }
-
-            if (!passwordSpecialCharRegex.test(password)) {
-                alert("Password must contain at least one special character.");
-                return false;
-            }
-
-            // 4. Validate confirm password (must match the password)
-            if (password !== confirmPassword) {
-                alert("Passwords do not match.");
-                return false;
-            }
-
-            return true;  // If all checks pass
+            if (/<.*?>/.test(username)) { alert("Username cannot contain HTML tags."); return false; }
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { alert("Enter a valid email."); return false; }
+            if (password.length < 8 || password.length > 16) { alert("Password must be 8-16 characters."); return false; }
+            if (password !== confirmPassword) { alert("Passwords do not match."); return false; }
+            if (!fileInput) { alert("Please upload your Institutional ID."); return false; }
+            return true;
         }
     </script>
 </head>
-<body>
-    <div class="register-container">
+<body class="d-flex align-items-center py-5 min-vh-100">
 
-        <a href="/manuhub/public">
-            <img src="../assets/images/manuhub_logo.jpeg" alt="ManuHub Logo">
-        </a>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card register-card p-4 p-md-5 mx-auto">
+                    <div class="text-center">
+                        <a href="/manuhub/public">
+                            <img src="../assets/images/manuhub_logo.jpeg" alt="ManuHub Logo" class="logo-img">
+                        </a>
+                        <h2 class="h4 fw-bold mb-2">Researcher Registration</h2>
+                        <p class="text-muted small mb-4">Accounts are reviewed by experts before activation.</p>
+                    </div>
 
-        <h1>Get Started Now</h1>
-        
-        <?php if (isset($data['error'])): ?>
-            <p style="color:red;"><?php echo $data['error']; ?></p>
-        <?php endif; ?>
+                    <?php if (isset($data['error'])): ?>
+                        <div class="alert alert-danger py-2 small text-center"><?php echo $data['error']; ?></div>
+                    <?php endif; ?>
 
-        <form name="registerForm" method="POST" action="/manuhub/public/index.php?action=register" onsubmit="return validateForm()">
-            <div class="input-container">
-                <input type="email" name="email" required placeholder="Email"><br>
+                    <form name="registerForm" method="POST" action="/manuhub/public/index.php?action=register" enctype="multipart/form-data" onsubmit="return validateForm()">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label">Email Address</label>
+                                <input type="email" name="email" class="form-control" required placeholder="name@university.edu">
+                            </div>
+                            
+                            <div class="col-12">
+                                <label class="form-label">Username</label>
+                                <input type="text" name="username" class="form-control" required placeholder="ResearcherName">
+                            </div>
+
+                            <div class="col-12">
+                                <div class="p-3 border rounded bg-light">
+                                    <label class="form-label mb-1">Upload Institutional ID</label>
+                                    <p class="text-muted" style="font-size: 11px;">Required for identity verification (PDF/JPG/PNG)</p>
+                                    <input type="file" name="identity_doc" class="form-control form-control-sm" required>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Password</label>
+                                <input type="password" name="password" class="form-control" required placeholder="8-16 chars">
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label">Confirm Password</label>
+                                <input type="password" name="confirm_password" class="form-control" required placeholder="Repeat password">
+                            </div>
+
+                            <div class="col-12 mt-4">
+                                <button type="submit" class="btn btn-primary w-100">Request Verification</button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <div class="text-center mt-4">
+                        <hr class="opacity-25">
+                        <p class="small text-muted mb-0">Already have an account? <a href="/manuhub/public/index.php?action=login" class="text-decoration-none fw-bold" style="color: #6d0828;">Login</a></p>
+                    </div>
+                </div>
             </div>
-
-            <div class="input-container">
-                <input type="text" name="username" required placeholder="Username"><br>               
-            </div>
-
-            <div class="input-container">
-                <input type="password" name="password" required placeholder="Password"><br>
-            </div>
-
-            <div class="input-container">
-                <input type="password" name="confirm_password" required placeholder="Confirm Password"><br>
-            </div>
-
-            <button type="submit">Register</button>
-        </form>
-
-        <hr>
-
-        <p>Already have an account? <a href="/manuhub/public/index.php?action=login">Log in Now!</a></p>
+        </div>
     </div>
+
 </body>
 </html>

@@ -3,111 +3,136 @@ require_once "../core/Controller.php";
 
 class UserController extends Controller {
 
-    // --- HELPER: SECURITY CHECK ---
-    private function checkAuth() {
-        if (session_status() === PHP_SESSION_NONE) { session_start(); }
-        // Ensure user is logged in
-        if (!isset($_SESSION['user_id'])) {
-            header("Location: index.php?action=login");
-            exit();
-        }
+    // --- UPDATED HELPER: SECURITY CHECK ---
+private function checkAuth() {
+    if (session_status() === PHP_SESSION_NONE) { session_start(); }
+    
+    // 1. Ensure user is logged in
+    if (!isset($_SESSION['user_id'])) {
+        header("Location: index.php?action=login");
+        exit();
     }
+
+    // 2. Ensure user is ACTIVE (New Security Gate)
+    // Admins and Experts are active by default, this mainly affects Researchers
+    if (isset($_SESSION['status']) && $_SESSION['status'] === 'pending') {
+        $this->loadView('user/pending_notice'); 
+        exit();
+    }
+}
 
     // --- 1. REGISTER USER ---
-    public function register() {
-        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-            $username = $_POST['username'];
-            $email = $_POST['email'];
-            $password = $_POST['password'];
-            $confirm_password = $_POST['confirm_password'];
+   public function register() {
+    if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+        $username = $_POST['username'];
+        $email = $_POST['email'];
+        $password = $_POST['password'];
+        $confirm_password = $_POST['confirm_password'];
 
-            // 1. Validation
-            if (preg_match('/<.*?>/', $username)) {
-                $this->loadView('register', ['error' => 'Username cannot contain < or >.']);
-                return;
-            }
-            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                $this->loadView('register', ['error' => 'Invalid email format.']);
-                return;
-            }
-            if (strlen($password) < 8 || strlen($password) > 16) {
-                $this->loadView('register', ['error' => 'Password must be 8-16 chars.']);
-                return;
-            }
-            if (!preg_match('/^(?=.*[!@#$%^&*(),.?":{}|<>]).{8,16}$/', $password)) {
-                $this->loadView('register', ['error' => 'Password must contain a special character.']);
-                return;
-            }
-            if ($password !== $confirm_password) {
-                $this->loadView('register', ['error' => 'Passwords do not match.']);
-                return;
-            }
-
-            $role = 'user';
-            $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
-
-            $database = new Database();
-            $db = $database->getConnection();
-            $userModel = $this->loadModel('User', $db);
-
-            if ($userModel->register($username, $email, $hashedPassword, $role)) {
-                // Redirect to Login page instead of dashboard directly (Standard practice)
-                header("Location: index.php?action=login&msg=registered");
-                exit();
-            } else {
-                $this->loadView('register', ['error' => 'Registration failed (Email might be taken)']);
-            }
+        // 1. Existing Input Validations
+        if (preg_match('/<.*?>/', $username)) {
+            $this->loadView('register', ['error' => 'Username cannot contain HTML tags.']);
+            return;
         }
+        if ($password !== $confirm_password) {
+            $this->loadView('register', ['error' => 'Passwords do not match.']);
+            return;
+        }
+
+        $database = new Database();
+        $db = $database->getConnection();
+        
+        // 2. NEW: PROACTIVE DUPLICATE EMAIL CHECK
+        // This prevents the PDO Integrity Constraint Violation (Duplicate Entry)
+        $checkEmail = $db->prepare("SELECT user_id FROM users WHERE email = :email LIMIT 1");
+        $checkEmail->execute([':email' => $email]);
+        
+        if ($checkEmail->rowCount() > 0) {
+            $this->loadView('register', ['error' => 'This email is already registered. Please login or use another address.']);
+            return;
+        }
+
+        // 3. Handle ID Document Upload
+        $docName = null;
+        if (isset($_FILES['identity_doc']) && $_FILES['identity_doc']['error'] == 0) {
+            $allowed = ['pdf', 'jpg', 'jpeg', 'png'];
+            $fileName = $_FILES['identity_doc']['name'];
+            $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+            
+            if (!in_array($ext, $allowed)) {
+                $this->loadView('register', ['error' => 'Invalid file type. Only PDF, JPG, and PNG allowed.']);
+                return;
+            }
+
+            // Create unique filename
+            $docName = "verify_" . time() . "_" . preg_replace("/[^a-zA-Z0-9]/", "", $username) . "." . $ext;
+            $targetPath = "../public/uploads/verify/" . $docName;
+
+            if (!move_uploaded_file($_FILES['identity_doc']['tmp_name'], $targetPath)) {
+                $this->loadView('register', ['error' => 'Failed to upload verification document.']);
+                return;
+            }
+        } else {
+            $this->loadView('register', ['error' => 'Institutional ID is required for registration.']);
+            return;
+        }
+
+        // 4. Database Insertion
+        $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
+        $role = 'user'; 
+
+        $userModel = $this->loadModel('User', $db);
+
+        // Call the updated Model method
+        if ($userModel->register($username, $email, $hashedPassword, $role, $docName)) {
+    // Pass 'success' instead of 'error' to trigger the green box
+    $this->loadView('login', ['success' => 'Registration successful! An expert will verify your ID shortly.']);
+} else {
+            // Fallback error if something else goes wrong
+            $this->loadView('register', ['error' => 'Registration failed. Please try again later.']);
+        }
+    } else {
         $this->loadView('register');
     }
+}
+    // --- UPDATED LOGIN LOGIC ---
+public function login() {
+    if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+        $email = $_POST['email'];
+        $password = $_POST['password'];
 
-    // --- 2. LOGIN USER ---
-    public function login() {
-        if (session_status() === PHP_SESSION_NONE) { session_start(); }
+        $database = new Database();
+        $db = $database->getConnection();
+        $userModel = $this->loadModel('User', $db);
 
-        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-            $email = trim($_POST['email']);
-            $password = trim($_POST['password']);
+        $user = $userModel->login($email, $password);
 
-            $database = new Database();
-            $db = $database->getConnection();
-            $userModel = $this->loadModel('User', $db);
+        if ($user) {
+            // Save status to session to check in checkAuth()
+            $_SESSION['user_id'] = $user['user_id'];
+            $_SESSION['username'] = $user['username'];
+            $_SESSION['role'] = $user['role'];
+            $_SESSION['status'] = $user['status']; // Store 'active' or 'pending'
+            $_SESSION['email'] = $user['email'];
 
-            $user = $userModel->login($email, $password);
+            session_regenerate_id(true);
 
-            if ($user) {
-                // --- CRITICAL: CHECK IF USER IS SUSPENDED ---
-                if (isset($user['status']) && $user['status'] === 'inactive') {
-                    $this->loadView('login', ['error' => 'Your account has been suspended. Contact Admin.']);
-                    return; 
-                }
-
-                session_regenerate_id(true);
-                $_SESSION['user_id'] = $user['user_id']; 
-                $_SESSION['username'] = $user['username'];
-                $_SESSION['email'] = $user['email']; // Needed for Dashboard
-                $_SESSION['role'] = strtolower($user['role']);
-
-                // Log the action
-                require_once "../app/models/Logger.php";
-                Logger::log("LOGIN", "User " . $user['username'] . " logged in.");
-
-                // Redirect based on Role
-                if ($_SESSION['role'] === 'admin') {
-                    header("Location: index.php?action=admin_dashboard");
-                } elseif ($_SESSION['role'] === 'expert') {
-                    header("Location: index.php?action=expert_dashboard"); 
-                } else {
-                    header("Location: index.php?action=user_dashboard");
-                }
-                exit();
-
+            // Redirect based on role
+            if ($user['role'] === 'admin') {
+                header("Location: index.php?action=admin_dashboard");
+            } elseif ($user['role'] === 'expert') {
+                header("Location: index.php?action=expert_dashboard");
             } else {
-                $this->loadView('login', ['error' => 'Invalid email or password']);
+                header("Location: index.php?action=user_dashboard");
             }
+            exit();
+        } else {
+            $this->loadView('login', ['error' => 'Invalid email or password.']);
         }
+    } else {
         $this->loadView('login');
     }
+}
 
     // --- 3. USER DASHBOARD (Fixed to show counts and lists) ---
    public function dashboard() {

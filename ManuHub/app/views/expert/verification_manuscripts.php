@@ -140,6 +140,12 @@
         <i class="bi bi-grid-fill"></i> Dashboard
     </a>
 
+
+     <a href="index.php?action=expert_verification_users" 
+       class="menu-item <?php echo ($current_action == 'expert_verification_users') ? 'active' : ''; ?>">
+        <i class="bi bi-people-fill"></i> Researcher IDs
+    </a>
+
     <a href="index.php?action=expert_verification_manuscripts" 
        class="menu-item <?php echo ($current_action == 'expert_verification_manuscripts') ? 'active' : ''; ?>">
         <i class="bi bi-file-earmark-text"></i> Manuscripts

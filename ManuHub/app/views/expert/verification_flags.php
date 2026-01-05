@@ -92,6 +92,11 @@
         <i class="bi bi-grid-fill"></i> Dashboard
     </a>
 
+    <a href="index.php?action=expert_verification_users" 
+       class="menu-item <?php echo ($current_action == 'expert_verification_users') ? 'active' : ''; ?>">
+        <i class="bi bi-people-fill"></i> Researcher IDs
+    </a>
+
     <a href="index.php?action=expert_verification_manuscripts" 
        class="menu-item <?php echo ($current_action == 'expert_verification_manuscripts') ? 'active' : ''; ?>">
         <i class="bi bi-file-earmark-text"></i> Manuscripts
@@ -154,20 +159,34 @@
                 <tbody>
                     <?php if (!empty($data['list'])): ?>
                         <?php foreach ($data['list'] as $row): ?>
-                        <tr class="item-row" data-status="<?php echo strtolower($row['status']); ?>">
+                        <tr class="item-row" data-status="<?php echo strtolower($row['status']); ?>" data-type="<?php echo htmlspecialchars($row['target_type'] ?? 'related_work'); ?>">
                             <td>
                                 <div style="font-weight: 700;"><?php echo htmlspecialchars($row['username'] ?? 'Anonymous User'); ?></div>
                                 <div style="font-size: 11px; color: #95a5a6;"><?php echo date('d M Y', strtotime($row['created_at'])); ?></div>
                             </td>
                             <td>
-                                <div style="font-size: 11px; text-transform: uppercase; color: #95a5a6;">Reported Item:</div>
-                                <div style="font-weight: 600; color: #fff; margin-bottom: 4px;">
-                                    <?php echo htmlspecialchars($row['work_title'] ?? 'N/A'); ?>
-                                </div>
-                                <a href="<?php echo htmlspecialchars($row['work_url'] ?? '#'); ?>" target="_blank" class="work-link">
-                                    <i class="bi bi-box-arrow-up-right me-1"></i> Visit Source
-                                </a>
-                            </td>
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+        <?php 
+            // Determine badge style based on the flag type
+            $type = strtolower($row['target_type'] ?? 'related_work'); 
+            $isCitation = ($type === 'citation');
+            $badgeColor = $isCitation ? '#9b59b6' : '#3498db'; // Purple for Citation, Blue for Related Work
+            $label = $isCitation ? 'Citation' : 'Related Work';
+        ?>
+        <span style="padding: 2px 8px; border-radius: 4px; font-size: 9px; font-weight: 800; color: white; text-transform: uppercase; background: <?php echo $badgeColor; ?>;">
+            <?php echo $label; ?>
+        </span>
+    </div>
+
+    <div style="font-size: 11px; text-transform: uppercase; color: #95a5a6;">Reported Item:</div>
+    <div style="font-weight: 600; color: #fff; margin-bottom: 4px;">
+        <?php echo htmlspecialchars($row['work_title'] ?? 'N/A'); ?>
+    </div>
+    
+    <a href="<?php echo htmlspecialchars($row['work_url'] ?? '#'); ?>" target="_blank" class="work-link">
+        <i class="bi bi-box-arrow-up-right me-1"></i> Visit Source
+    </a>
+</td>
                             <td>
                                 <div style="font-size: 11px; text-transform: uppercase; color: #95a5a6; margin-bottom: 5px;">User Feedback:</div>
                                 <div class="reason-box">"<?php echo htmlspecialchars($row['reason']); ?>"</div>

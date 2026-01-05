@@ -13,63 +13,117 @@ class ExpertController extends Controller {
 
     // --- 1. DASHBOARD ---
     public function dashboard() {
-        $this->checkExpertAuth();
-        $database = new Database();
-        $db = $database->getConnection();
-        
-        // A. FETCH PENDING LISTS
-        $stmtMS = $db->query("SELECT ms.*, u.username FROM manuscripts_submission ms 
-                              LEFT JOIN users u ON ms.submitted_by = u.user_id 
-                              WHERE ms.status = 'pending' ORDER BY ms.create_dat DESC");
-        
-        $stmtRW = $db->query("SELECT rw.*, u.username, m.Title as manuscript_title FROM related_works_submission rw 
-                              LEFT JOIN users u ON rw.submitted_by = u.user_id 
-                              LEFT JOIN manuscripts m ON rw.manuscript_id = m.id
-                              WHERE rw.status = 'pending' ORDER BY rw.created_at DESC");
-
-        $stmtSug = $db->query("SELECT s.*, u.username, m.Title as manuscript_title 
-                               FROM metadata_suggestions s 
-                               LEFT JOIN users u ON s.user_id = u.user_id 
-                               LEFT JOIN manuscripts m ON s.manuscript_id = m.id
-                               WHERE s.status = 'pending' ORDER BY s.created_at DESC");
-
-        $stmtFlags = $db->query("SELECT f.*, u.username, r.title as work_title 
-                                 FROM content_flags f 
-                                 LEFT JOIN users u ON f.user_id = u.user_id 
-                                 LEFT JOIN related_works r ON f.work_id = r.id
-                                 WHERE f.status = 'pending' ORDER BY f.created_at DESC");
-
-       // --- ExpertController.php ---
-
-// B. STATISTICS CALCULATION (Focused on 'Approved' only for Impact)
-$msApproved = $db->query("SELECT COUNT(*) FROM manuscripts_submission WHERE status = 'approved'")->fetchColumn();
-$rwApproved = $db->query("SELECT COUNT(*) FROM related_works_submission WHERE status = 'approved'")->fetchColumn();
-$sugApproved = $db->query("SELECT COUNT(*) FROM metadata_suggestions WHERE status = 'approved'")->fetchColumn();
-$flagsResolved = $db->query("SELECT COUNT(*) FROM content_flags WHERE status = 'resolved'")->fetchColumn();
-
-$totalVerified = $msApproved + $rwApproved + $sugApproved + $flagsResolved;
-
-// C. LOAD VIEW
-$this->loadView('expert/dashboard', [
-    'manuscripts' => $stmtMS->fetchAll(PDO::FETCH_ASSOC),
-    'related_works' => $stmtRW->fetchAll(PDO::FETCH_ASSOC),
-    'suggestions' => $stmtSug->fetchAll(PDO::FETCH_ASSOC),
-    'flags' => $stmtFlags->fetchAll(PDO::FETCH_ASSOC),
+    $this->checkExpertAuth();
+    $database = new Database();
+    $db = $database->getConnection();
     
-    // Summary Data
-    'total_verified' => $totalVerified,
-    'count_ms_approved' => $msApproved,
-    'count_rw_approved' => $rwApproved,
-    'count_sug_approved' => $sugApproved,
-    'count_flags_resolved' => $flagsResolved,
+    // A. FETCH PENDING LISTS
+    $stmtMS = $db->query("SELECT ms.*, u.username FROM manuscripts_submission ms 
+                          LEFT JOIN users u ON ms.submitted_by = u.user_id 
+                          WHERE ms.status = 'pending' ORDER BY ms.create_dat DESC");
+    
+    $stmtRW = $db->query("SELECT rw.*, u.username, m.Title as manuscript_title FROM related_works_submission rw 
+                          LEFT JOIN users u ON rw.submitted_by = u.user_id 
+                          LEFT JOIN manuscripts m ON rw.manuscript_id = m.id
+                          WHERE rw.status = 'pending' ORDER BY rw.created_at DESC");
 
-    // Header Counts (Pending items only)
-    'count_pending_ms' => $db->query("SELECT COUNT(*) FROM manuscripts_submission WHERE status = 'pending'")->fetchColumn(),
-    'count_pending_rw' => $db->query("SELECT COUNT(*) FROM related_works_submission WHERE status = 'pending'")->fetchColumn(),
-    'count_pending_sug' => $db->query("SELECT COUNT(*) FROM metadata_suggestions WHERE status = 'pending'")->fetchColumn(),
-    'count_pending_flags' => $db->query("SELECT COUNT(*) FROM content_flags WHERE status = 'pending'")->fetchColumn()
-]);
+    $stmtSug = $db->query("SELECT s.*, u.username, m.Title as manuscript_title 
+                           FROM metadata_suggestions s 
+                           LEFT JOIN users u ON s.user_id = u.user_id 
+                           LEFT JOIN manuscripts m ON s.manuscript_id = m.id
+                           WHERE s.status = 'pending' ORDER BY s.created_at DESC");
+
+    $stmtFlags = $db->query("SELECT f.*, u.username, r.title as work_title 
+                             FROM content_flags f 
+                             LEFT JOIN users u ON f.user_id = u.user_id 
+                             LEFT JOIN related_works r ON f.work_id = r.id
+                             WHERE f.status = 'pending' ORDER BY f.created_at DESC");
+
+    $stmtPendingUsers = $db->query("SELECT username, created_at FROM users 
+                               WHERE status = 'pending' 
+                               ORDER BY created_at DESC LIMIT 2");
+
+    // B. STATISTICS CALCULATION
+    $msApproved = $db->query("SELECT COUNT(*) FROM manuscripts_submission WHERE status = 'approved'")->fetchColumn();
+    $rwApproved = $db->query("SELECT COUNT(*) FROM related_works_submission WHERE status = 'approved'")->fetchColumn();
+    $sugApproved = $db->query("SELECT COUNT(*) FROM metadata_suggestions WHERE status = 'approved'")->fetchColumn();
+    $flagsResolved = $db->query("SELECT COUNT(*) FROM content_flags WHERE status = 'resolved'")->fetchColumn();
+
+    // NEW: Count pending users for the alert system
+    $countPendingUsers = $db->query("SELECT COUNT(*) FROM users WHERE status = 'pending'")->fetchColumn();
+
+    $totalVerified = $msApproved + $rwApproved + $sugApproved + $flagsResolved;
+
+    // C. LOAD VIEW
+    $this->loadView('expert/dashboard', [
+        'manuscripts' => $stmtMS->fetchAll(PDO::FETCH_ASSOC),
+        'related_works' => $stmtRW->fetchAll(PDO::FETCH_ASSOC),
+        'suggestions' => $stmtSug->fetchAll(PDO::FETCH_ASSOC),
+        'flags' => $stmtFlags->fetchAll(PDO::FETCH_ASSOC),
+        'pending_users_list' => $stmtPendingUsers->fetchAll(PDO::FETCH_ASSOC),
+        
+        'total_verified' => $totalVerified,
+        'count_ms_approved' => $msApproved,
+        'count_rw_approved' => $rwApproved,
+        'count_sug_approved' => $sugApproved,
+        'count_flags_resolved' => $flagsResolved,
+        'count_pending_users' => $countPendingUsers,
+
+        // Header Counts
+        'count_pending_ms' => $db->query("SELECT COUNT(*) FROM manuscripts_submission WHERE status = 'pending'")->fetchColumn(),
+        'count_pending_rw' => $db->query("SELECT COUNT(*) FROM related_works_submission WHERE status = 'pending'")->fetchColumn(),
+        'count_pending_sug' => $db->query("SELECT COUNT(*) FROM metadata_suggestions WHERE status = 'pending'")->fetchColumn(),
+        'count_pending_flags' => $db->query("SELECT COUNT(*) FROM content_flags WHERE status = 'pending'")->fetchColumn(),
+        
+        // NEW: Alert System Data
+        'count_pending_users' => $countPendingUsers
+    ]);
+}
+    // --- USER VERIFICATION METHODS ---
+
+public function verifyUsers() {
+    // Check authentication (existing helper in your controllers)
+    if (method_exists($this, 'checkExpertAuth')) { $this->checkExpertAuth(); };
+
+    $db = (new Database())->getConnection();
+    
+    // Fetch only users with 'pending' status
+    $query = "SELECT * FROM users WHERE status = 'pending' ORDER BY created_at DESC";
+    $stmt = $db->prepare($query);
+    $stmt->execute();
+    $list = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Load the new view we are about to create
+    $this->loadView('expert/verification_users', ['list' => $list]);
+}
+
+public function approveUser() {
+    if (method_exists($this, 'checkExpertAuth')) { $this->checkExpertAuth(); } ;
+    $id = $_GET['id'] ?? null;
+    $decision = $_GET['decision'] ?? 'approve';
+
+    if ($id) {
+        $db = (new Database())->getConnection();
+        
+        if ($decision === 'approve') {
+            $stmt = $db->prepare("UPDATE users SET status = 'active' WHERE user_id = :id");
+            $actionMsg = "activated";
+        } else {
+            // If rejected, we keep them inactive or could delete them
+            $stmt = $db->prepare("UPDATE users SET status = 'inactive' WHERE user_id = :id");
+            $actionMsg = "rejected";
+        }
+
+        if ($stmt->execute([':id' => $id])) {
+            // Log the system activity
+            require_once "../app/models/Logger.php";
+            Logger::log("USER VERIFICATION", "User #$id was $actionMsg by " . $_SESSION['username']);
+            
+            header("Location: index.php?action=" . $_SESSION['role'] . "_verification_users&msg=success");
+            exit();
+        }
     }
+}
 
     // --- 2. MANUSCRIPT VERIFICATION ---
     public function verifyManuscripts() {
