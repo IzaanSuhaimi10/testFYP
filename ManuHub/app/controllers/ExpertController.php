@@ -187,36 +187,49 @@ public function approveUser() {
     }
 
     // --- 3. METADATA & IMAGE SUGGESTIONS VERIFICATION ---
-    public function verifySuggestions() {
-        $this->checkExpertAuth();
-        $db = (new Database())->getConnection();
+public function verifySuggestions() {
+    $this->checkExpertAuth();
+    $db = (new Database())->getConnection();
 
-        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-            if (isset($_POST['status']) && is_array($_POST['status'])) {
-                foreach ($_POST['status'] as $id => $newStatus) {
-                    $comment = $_POST['comments'][$id] ?? null;
+    if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+        if (isset($_POST['status']) && is_array($_POST['status'])) {
+            foreach ($_POST['status'] as $id => $newStatus) {
+                $comment = $_POST['comments'][$id] ?? null;
 
-                    $updateStmt = $db->prepare("UPDATE metadata_suggestions SET status = :status, rejection_comment = :comment WHERE suggestion_id = :id");
-                    $updateStmt->execute([':status' => $newStatus, ':comment' => $comment, ':id' => $id]);
+                $updateStmt = $db->prepare("UPDATE metadata_suggestions SET status = :status, rejection_comment = :comment WHERE suggestion_id = :id");
+                $updateStmt->execute([':status' => $newStatus, ':comment' => $comment, ':id' => $id]);
 
-                    if ($newStatus === 'approved') {
-                        $this->applySuggestionToLive($db, $id);
-                    }
+                if ($newStatus === 'approved') {
+                    $this->applySuggestionToLive($db, $id);
                 }
             }
-            header("Location: index.php?action=expert_verification_suggestions&msg=saved");
-            exit();
         }
-
-        $query = "SELECT s.*, u.username, m.Title as manuscript_title 
-                  FROM metadata_suggestions s 
-                  LEFT JOIN users u ON s.user_id = u.user_id 
-                  LEFT JOIN manuscripts m ON s.manuscript_id = m.id
-                  ORDER BY FIELD(s.status, 'pending', 'approved', 'rejected'), s.created_at DESC";
-        $list = $db->query($query)->fetchAll(PDO::FETCH_ASSOC);
-
-        $this->loadView('expert/verification_suggestions', ['list' => $list]);
+        header("Location: index.php?action=expert_verification_suggestions&msg=saved");
+        exit();
     }
+
+    $query = "SELECT s.*, u.username, m.Title as manuscript_title 
+              FROM metadata_suggestions s 
+              LEFT JOIN users u ON s.user_id = u.user_id 
+              LEFT JOIN manuscripts m ON s.manuscript_id = m.id
+              ORDER BY FIELD(s.status, 'pending', 'approved', 'rejected'), s.created_at DESC";
+    $list = $db->query($query)->fetchAll(PDO::FETCH_ASSOC);
+
+    // --- ADD THIS LOGIC HERE ---
+    // Loop through the list to check for image file existence
+    foreach ($list as &$row) {
+        if ($row['field_name'] === 'Cover Image' && !empty($row['suggested_image'])) {
+            // Check the exact path where metadata.php looks for images
+            $fullPath = "../assets/images/" . $row['suggested_image'];
+            $row['file_exists'] = file_exists($fullPath);
+        } else {
+            $row['file_exists'] = false;
+        }
+    }
+    // ---------------------------
+
+    $this->loadView('expert/verification_suggestions', ['list' => $list]);
+}
 
     private function applySuggestionToLive($db, $suggestionId) {
         $stmt = $db->prepare("SELECT * FROM metadata_suggestions WHERE suggestion_id = :id");
@@ -310,11 +323,13 @@ public function approveUser() {
             exit();
         }
 
-        $query = "SELECT f.*, u.username, r.title as work_title, r.url as work_url 
-                  FROM content_flags f 
-                  LEFT JOIN users u ON f.user_id = u.user_id 
-                  LEFT JOIN related_works r ON f.work_id = r.id
-                  ORDER BY FIELD(f.status, 'pending', 'resolved', 'dismissed'), f.created_at DESC";
+        $query = "SELECT f.*, u.username, 
+                 r.title as work_title, 
+                 r.url as work_url 
+          FROM content_flags f 
+          LEFT JOIN users u ON f.user_id = u.user_id 
+          LEFT JOIN related_works r ON f.work_id = r.id
+          ORDER BY FIELD(f.status, 'pending', 'resolved', 'dismissed'), f.created_at DESC";
         $list = $db->query($query)->fetchAll(PDO::FETCH_ASSOC);
 
         $this->loadView('expert/verification_flags', ['list' => $list]);
@@ -368,5 +383,42 @@ public function approveUser() {
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         $this->loadView('expert/edit_profile', ['user' => $user]);
     }
+
+public function processUserVerifications() {
+    $this->checkExpertAuth(); // Ensure security
+    
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['status'])) {
+        $db = (new Database())->getConnection();
+        $db->beginTransaction(); // Use a transaction for safety
+
+        try {
+            $stmt = $db->prepare("UPDATE users SET status = :status WHERE user_id = :id");
+
+            foreach ($_POST['status'] as $userId => $newStatus) {
+                $stmt->execute([
+                    ':status' => $newStatus,
+                    ':id' => $userId
+                ]);
+            }
+
+            $db->commit();
+            
+            // Log the activity
+            require_once "../app/models/Logger.php";
+            Logger::log("BULK USER VERIFICATION", "Expert processed user status updates.");
+            
+            // Redirect back to the verification page, NOT the homepage
+            header("Location: index.php?action=expert_verification_users&msg=saved");
+            exit();
+            
+        } catch (Exception $e) {
+            $db->rollBack();
+            die("Error updating users: " . $e->getMessage());
+        }
+    } else {
+        header("Location: index.php?action=expert_verification_users");
+        exit();
+    }
+}
 }
 ?>

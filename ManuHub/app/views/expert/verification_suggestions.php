@@ -174,21 +174,40 @@
                     <div style="font-size: 11px; color: #26c6da;">ID: #<?php echo $row['manuscript_id']; ?></div>
                 </td>
                 <td>
-                    <span class="badge bg-secondary mb-2" style="font-size: 10px;"><?php echo strtoupper($row['field_name']); ?></span>
-                    <div class="suggestion-box">
-                        <?php if ($row['field_name'] === 'Cover Image'): ?>
-                            <div style="font-size: 11px; color: #95a5a6;">Suggested Cover Image:</div>
-                            <?php if (!empty($row['suggested_image'])): ?>
-                                <img src="../public/assets/images/uploads/<?php echo $row['suggested_image']; ?>" class="preview-img" alt="Cover Preview">
-                            <?php else: ?>
-                                <div style="color: #e74c3c; font-style: italic;">No image file found.</div>
-                            <?php endif; ?>
-                        <?php else: ?>
-                            <div style="font-size: 11px; color: #95a5a6;">Suggested Text:</div>
-                            <div style="color: #2ecc71; font-weight: 500;">"<?php echo htmlspecialchars($row['suggested_value']); ?>"</div>
-                        <?php endif; ?>
+    <span class="badge bg-secondary mb-2" style="font-size: 10px;">
+        <?php echo strtoupper($row['field_name']); ?>
+    </span>
+    <div class="suggestion-box">
+        <?php if ($row['field_name'] === 'Cover Image'): ?>
+            <div style="font-size: 11px; color: #95a5a6; margin-bottom: 5px;">Suggested Cover Image:</div>
+            
+            <?php if (!empty($row['suggested_image'])): ?>
+                <?php if ($row['file_exists']): ?>
+                    <span class="badge bg-success mb-2" style="font-size: 9px;">
+                        <i class="bi bi-check-circle-fill"></i> FILE FOUND IN DIRECTORY
+                    </span>
+                    <br>
+                    <img src="../assets/images/<?php echo $row['suggested_image']; ?>" 
+                         class="preview-img" alt="Cover Preview">
+                <?php else: ?>
+                    <span class="badge bg-danger mb-2" style="font-size: 9px;">
+                        <i class="bi bi-exclamation-triangle-fill"></i> FILE MISSING ON SERVER
+                    </span>
+                    <div style="color: #e74c3c; font-size: 11px; font-style: italic;">
+                        Error: File was not found in assets/images/
                     </div>
-                </td>
+                <?php endif; ?>
+                
+            <?php else: ?>
+                <div style="color: #e74c3c; font-style: italic;">No image filename provided.</div>
+            <?php endif; ?>
+
+        <?php else: ?>
+            <div style="font-size: 11px; color: #95a5a6;">Suggested Text:</div>
+            <div style="color: #2ecc71; font-weight: 500;">"<?php echo htmlspecialchars($row['suggested_value']); ?>"</div>
+        <?php endif; ?>
+    </div>
+</td>
                 <td>
                     <select name="status[<?php echo $row['suggestion_id']; ?>]" class="status-select <?php echo $row['status']; ?>" onchange="updateColor(this)">
                         <option value="pending" <?php if($row['status']=='pending') echo 'selected'; ?>>Pending</option>

@@ -78,7 +78,7 @@
 
     <div class="filter-bar">
         <i class="bi bi-search" style="color: #999;"></i>
-        <input type="text" id="userSearch" class="search-input" placeholder="Search by name or email..." onkeyup="filterUsers()">
+       <input type="text" id="userSearch" class="search-input" placeholder="Search by name, email, or joining reason..." onkeyup="filterUsers()">
         <div style="border-left: 1px solid #eee; height: 30px;"></div>
         <select id="statusFilter" class="filter-select" onchange="filterUsers()">
             <option value="all">All Statuses</option>
@@ -104,9 +104,18 @@
                         <?php foreach ($data['list'] as $user): ?>
                         <tr class="item-row" data-status="<?= strtolower($user['status']); ?>">
                             <td>
-                                <div style="font-weight: 700;"><?php echo htmlspecialchars($user['username']); ?></div>
-                                <div style="font-size: 11px; color: #95a5a6;">Applied: <?php echo date('d M Y', strtotime($user['created_at'])); ?></div>
-                            </td>
+    <div style="font-weight: 700;"><?php echo htmlspecialchars($user['username']); ?></div>
+    <div style="font-size: 11px; color: #95a5a6;">Applied: <?php echo date('d M Y', strtotime($user['created_at'])); ?></div>
+    
+    <div style="margin-top: 10px; padding: 8px; background: rgba(38, 198, 218, 0.1); border-radius: 6px; border-left: 3px solid #26c6da;">
+        <div style="font-size: 9px; text-transform: uppercase; color: #26c6da; font-weight: 800; margin-bottom: 2px;">
+            Intent / Goal:
+        </div>
+        <div style="font-size: 12px; color: #ecf0f1; font-style: italic; line-height: 1.4;">
+            "<?php echo htmlspecialchars($user['join_reason'] ?? 'Not specified'); ?>"
+        </div>
+    </div>
+</td>
                             <td><?php echo htmlspecialchars($user['email']); ?></td>
                             <td>
                                 <button type="button" class="btn-view-doc" onclick="openDocModal('<?= $user['verification_doc']; ?>', '<?= htmlspecialchars($user['username']); ?>')">
@@ -150,25 +159,26 @@
         select.className = 'status-select ' + select.value;
     }
 
-    function filterUsers() {
-        let input = document.getElementById('userSearch').value.toLowerCase();
-        let status = document.getElementById('statusFilter').value.toLowerCase();
-        let rows = document.querySelectorAll('.item-row');
+   function filterUsers() {
+    let input = document.getElementById('userSearch').value.toLowerCase();
+    let status = document.getElementById('statusFilter').value.toLowerCase();
+    let rows = document.querySelectorAll('.item-row');
 
-        rows.forEach(row => {
-            let text = row.innerText.toLowerCase();
-            let rowStatus = row.getAttribute('data-status');
-            
-            let matchesSearch = text.includes(input);
-            let matchesStatus = (status === 'all') || (rowStatus === status);
+    rows.forEach(row => {
+        // This takes all text inside the row, including the Name, Email, AND the new Reason text
+        let text = row.innerText.toLowerCase();
+        let rowStatus = row.getAttribute('data-status');
+        
+        let matchesSearch = text.includes(input);
+        let matchesStatus = (status === 'all') || (rowStatus === status);
 
-            if (matchesSearch && matchesStatus) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
-        });
-    }
+        if (matchesSearch && matchesStatus) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
 
     function openDocModal(fileName, username) {
         const preview = document.getElementById('docPreview');

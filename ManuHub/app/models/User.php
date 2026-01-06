@@ -8,19 +8,19 @@ class User {
     }
 
     // Register a new user
-   public function register($username, $email, $password, $role, $docPath = null) {
-    // We add 'status' and 'verification_doc' to the insert query
-    // Default status is 'pending' as defined in the DB schema
-    $query = "INSERT INTO " . $this->table . " (username, email, password, role, verification_doc, status) 
-              VALUES (:username, :email, :password, :role, :doc, 'pending')";
+   public function register($username, $email, $password, $role, $docPath = null, $joinReason = null) {
+    // Add join_reason to the columns and VALUES
+    $query = "INSERT INTO " . $this->table . " (username, email, password, role, verification_doc, join_reason, status) 
+              VALUES (:username, :email, :password, :role, :doc, :reason, 'pending')";
     
     $stmt = $this->conn->prepare($query);
     
     $stmt->bindParam(':username', $username);
     $stmt->bindParam(':email', $email);
-    $stmt->bindParam(':password', $password); // Hashed password from Controller
+    $stmt->bindParam(':password', $password);
     $stmt->bindParam(':role', $role);
-    $stmt->bindParam(':doc', $docPath); // The filename saved to /uploads/verify/
+    $stmt->bindParam(':doc', $docPath);
+    $stmt->bindParam(':reason', $joinReason); // Binding the new field
     
     return $stmt->execute();
 }

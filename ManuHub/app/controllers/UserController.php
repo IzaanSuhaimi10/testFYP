@@ -29,7 +29,13 @@ private function checkAuth() {
         $password = $_POST['password'];
         $confirm_password = $_POST['confirm_password'];
 
-        // 1. Existing Input Validations
+        // --- 1. CAPTURE JOIN REASON (Correct Logic) ---
+        $reason_type = $_POST['join_reason_type'] ?? 'I want to be a researcher';
+        $final_reason = ($reason_type === 'Other' && !empty($_POST['other_reason_text'])) 
+                        ? $_POST['other_reason_text'] 
+                        : $reason_type;
+
+        // 2. Input Validations
         if (preg_match('/<.*?>/', $username)) {
             $this->loadView('register', ['error' => 'Username cannot contain HTML tags.']);
             return;
@@ -42,13 +48,11 @@ private function checkAuth() {
         $database = new Database();
         $db = $database->getConnection();
         
-        // 2. NEW: PROACTIVE DUPLICATE EMAIL CHECK
-        // This prevents the PDO Integrity Constraint Violation (Duplicate Entry)
         $checkEmail = $db->prepare("SELECT user_id FROM users WHERE email = :email LIMIT 1");
         $checkEmail->execute([':email' => $email]);
         
         if ($checkEmail->rowCount() > 0) {
-            $this->loadView('register', ['error' => 'This email is already registered. Please login or use another address.']);
+            $this->loadView('register', ['error' => 'This email is already registered.']);
             return;
         }
 
@@ -64,7 +68,6 @@ private function checkAuth() {
                 return;
             }
 
-            // Create unique filename
             $docName = "verify_" . time() . "_" . preg_replace("/[^a-zA-Z0-9]/", "", $username) . "." . $ext;
             $targetPath = "../public/uploads/verify/" . $docName;
 
@@ -73,7 +76,7 @@ private function checkAuth() {
                 return;
             }
         } else {
-            $this->loadView('register', ['error' => 'Institutional ID is required for registration.']);
+            $this->loadView('register', ['error' => 'Institutional ID is required.']);
             return;
         }
 
@@ -83,12 +86,10 @@ private function checkAuth() {
 
         $userModel = $this->loadModel('User', $db);
 
-        // Call the updated Model method
-        if ($userModel->register($username, $email, $hashedPassword, $role, $docName)) {
-    // Pass 'success' instead of 'error' to trigger the green box
-    $this->loadView('login', ['success' => 'Registration successful! An expert will verify your ID shortly.']);
-} else {
-            // Fallback error if something else goes wrong
+        // --- CALL UPDATED MODEL WITH 6 ARGUMENTS ---
+        if ($userModel->register($username, $email, $hashedPassword, $role, $docName, $final_reason)) {
+            $this->loadView('login', ['success' => 'Registration successful! An expert will verify your ID shortly.']);
+        } else {
             $this->loadView('register', ['error' => 'Registration failed. Please try again later.']);
         }
     } else {

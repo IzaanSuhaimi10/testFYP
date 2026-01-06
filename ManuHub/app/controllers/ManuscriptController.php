@@ -223,7 +223,7 @@ class ManuscriptController extends Controller {
             $imageName = time() . '_' . basename($file['name']);
             
             // Define where to save the file on your server
-            $targetPath = "../public/assets/images/uploads/" . $imageName;
+            $targetPath = "../assets/images/" . $imageName;
 
             // Move the file from temporary storage to your uploads folder
             if (!move_uploaded_file($file['tmp_name'], $targetPath)) {

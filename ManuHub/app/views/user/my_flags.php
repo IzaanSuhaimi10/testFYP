@@ -109,13 +109,26 @@
             <tbody>
                 <?php if (!empty($data['list'])): ?>
                     <?php foreach ($data['list'] as $row): ?>
-                        <tr class="item-row" data-status="<?php echo strtolower($row['status']); ?>">
+                        <tr class="item-row" 
+                                data-status="<?php echo strtolower($row['status']); ?>" 
+                                data-type="<?php echo htmlspecialchars($row['target_type'] ?? 'related_work'); ?>">
                             <td>
-                                <div style="font-weight: 700; color: #333; margin-bottom: 2px;">
-                                    <?php echo htmlspecialchars($row['work_title'] ?? 'Unknown Work'); ?>
-                                </div>
-                                <div style="font-size: 11px; color: #999;">Type: Related Source</div>
-                            </td>
+    <div style="font-weight: 700; color: #333; margin-bottom: 4px;">
+        <?php echo htmlspecialchars($row['work_title'] ?? 'Unknown Work'); ?>
+    </div>
+    
+    <?php 
+        $type = strtolower($row['target_type'] ?? 'related_work'); 
+        $isCitation = ($type === 'citation');
+        // Matching Expert Dashboard colors for consistency
+        $badgeBg = $isCitation ? '#f3e8ff' : '#e0f2fe'; 
+        $badgeText = $isCitation ? '#9b59b6' : '#3498db'; 
+        $label = $isCitation ? 'Citation' : 'Related Source';
+    ?>
+    <span style="font-size: 9px; font-weight: 800; text-transform: uppercase; padding: 2px 8px; border-radius: 4px; background: <?php echo $badgeBg; ?>; color: <?php echo $badgeText; ?>;">
+        <?php echo $label; ?>
+    </span>
+</td>
                             <td>
                                 <div class="report-reason">
                                     <strong>Flag:</strong> <?php echo htmlspecialchars($row['reason']); ?>

@@ -137,7 +137,17 @@ $isLoggedIn = isset($_SESSION['user_id']);
                     <i class="bi bi-arrow-left me-2"></i> Back to Collection
                 </a>
                 <h1 class="display-5 fw-bold mb-0"><?php echo htmlspecialchars($data['manuscript']['Title']); ?></h1>
-                <p class="lead mt-2 opacity-75">Subject: <?php echo htmlspecialchars($data['manuscript']['Subject']); ?></p>
+                <p class="lead mt-2 opacity-75">
+    Subject: <?php echo htmlspecialchars($data['manuscript']['Subject']); ?>
+    <?php if ($isLoggedIn): ?>
+        <a href="#" class="ms-1 edit-trigger text-white text-decoration-none" 
+           data-field="Subject" 
+           data-bs-toggle="modal" 
+           data-bs-target="#suggestModal">
+            <i class="bi bi-pencil-square" style="font-size: 0.9rem;" title="Suggest a more accurate subject"></i>
+        </a>
+    <?php endif; ?>
+</p>
             </div>
             <div class="col-md-4 text-center text-md-end mt-4 mt-md-0">
                 <span class="badge p-2 px-3 fs-6" style="background-color: var(--accent-gold);">
@@ -206,8 +216,18 @@ $isLoggedIn = isset($_SESSION['user_id']);
             <div class="info-label">Title</div>
             <div class="info-value fw-bold"><?php echo htmlspecialchars($data['manuscript']['Title']); ?></div>
             
-            <div class="info-label">Subject</div>
-            <div class="info-value"><?php echo displayField($data['manuscript']['Subject'], 'Subject', $isLoggedIn); ?></div>
+           <div class="info-label">Subject</div>
+<div class="info-value">
+    <?php echo htmlspecialchars($data['manuscript']['Subject'] ?? 'Information missing'); ?>
+    <?php if ($isLoggedIn): ?>
+        <a href="#" class="ms-1 edit-trigger text-decoration-none" 
+           data-field="Subject" 
+           data-bs-toggle="modal" 
+           data-bs-target="#suggestModal">
+            <i class="bi bi-pencil-square text-primary" title="Suggest a more accurate subject"></i>
+        </a>
+    <?php endif; ?>
+</div>
         </div>
         <div class="col-md-6">
             <div class="info-label">Genre</div>
@@ -286,11 +306,11 @@ $isLoggedIn = isset($_SESSION['user_id']);
                         </a>
                         <?php if ($isLoggedIn): ?>
                             <a href="#" class="ms-2 text-danger flag-trigger" 
-                               data-work-id="<?php echo $work['id']; ?>" 
-                               data-work-title="<?php echo htmlspecialchars($work['title']); ?>" 
-                               data-bs-toggle="modal" data-bs-target="#flagModal">
-                                <i class="bi bi-flag" title="Report as irrelevant"></i>
-                            </a>
+   data-work-id="<?php echo $work['id']; ?>" 
+   data-work-title="<?php echo htmlspecialchars($work['title']); ?>" 
+   data-target-type="related_work" data-bs-toggle="modal" data-bs-target="#flagModal">
+    <i class="bi bi-flag" title="Report as irrelevant"></i>
+</a>
                         <?php endif; ?>
                         <small class="text-muted d-block mt-1"><?php echo htmlspecialchars($work['url']); ?></small>
                     </div>
@@ -365,7 +385,7 @@ $isLoggedIn = isset($_SESSION['user_id']);
         <div class="alert alert-light border-0 shadow-sm d-flex align-items-center p-2 mb-4" style="border-left: 4px solid #dc3545 !important;">
             <i class="bi bi-shield-exclamation text-danger me-3 fs-5"></i>
             <div class="small">
-                <strong>Moderation:</strong> Notice a citation that doesn't belong here? Use the flag icon to notify our experts.
+                <strong>Help us improve:</strong> Notice a citation that doesn't belong here? Use the flag icon to notify our experts.
             </div>
         </div>
     <?php endif; ?>
@@ -387,11 +407,11 @@ $isLoggedIn = isset($_SESSION['user_id']);
                         </a>
                         <?php if ($isLoggedIn): ?>
                             <a href="#" class="ms-2 text-danger flag-trigger" 
-                               data-work-id="<?php echo $work['id']; ?>" 
-                               data-work-title="<?php echo htmlspecialchars($work['title']); ?>" 
-                               data-bs-toggle="modal" data-bs-target="#flagModal">
-                                <i class="bi bi-flag"></i>
-                            </a>
+   data-work-id="<?php echo $work['id']; ?>" 
+   data-work-title="<?php echo htmlspecialchars($work['title']); ?>" 
+   data-target-type="citation" data-bs-toggle="modal" data-bs-target="#flagModal">
+    <i class="bi bi-flag"></i>
+</a>
                         <?php endif; ?>
                         <small class="text-muted d-block mt-1"><?php echo htmlspecialchars($work['url']); ?></small>
                     </div>
@@ -410,7 +430,7 @@ $isLoggedIn = isset($_SESSION['user_id']);
 </div>
                <div class="tab-pane fade" id="connections" style="min-height: 600px;">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 class="fw-bold mb-0" style="color: var(--primary-maroon);">Knowledge Graph</h4>
+        <h4 class="fw-bold mb-0" style="color: var(--primary-maroon);">Visualization Mapping</h4>
         <span class="badge bg-light text-dark border"><i class="bi bi-info-circle me-1"></i> Interactive</span>
     </div>
     
@@ -447,7 +467,7 @@ function drawGraph() {
         label: mainTitle.length > 20 ? mainTitle.substring(0, 20) + '...' : mainTitle, 
         title: mainTitle,
         color: { background: '#6d0828', border: '#b58428' },
-        font: { color: '#ffffff', size: 16 },
+        font: { color: '#6e6d6dff', size: 16 },
         shape: 'dot', size: 40
     }];
     
@@ -540,23 +560,49 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 
     // --- 3. FIELD EDIT LOGIC (KEEP AS IS) ---
-    document.querySelectorAll('.edit-trigger').forEach(trigger => {
-        trigger.addEventListener('click', function() {
-            const fieldName = this.getAttribute('data-field');
-            document.getElementById('modalFieldName').value = fieldName;
-            document.getElementById('displayFieldName').innerText = fieldName;
-            document.getElementById('suggestionInput').value = "";
-        });
-    });
+   // Location: metadata.php (within the <script> section)
+document.querySelectorAll('.edit-trigger').forEach(trigger => {
+    trigger.addEventListener('click', function() {
+        const fieldName = this.getAttribute('data-field');
+        
+        // Find the text near this trigger
+        // We look for the parent "info-value" div and get the text inside it
+        const parentDiv = this.closest('.info-value');
+        let currentText = parentDiv ? parentDiv.innerText.replace('Information missing', '').trim() : '';
+        
+        // Update Modal Fields
+        document.getElementById('modalFieldName').value = fieldName;
+        document.getElementById('displayFieldName').innerText = fieldName;
+        document.getElementById('suggestionInput').value = "";
 
-    document.querySelectorAll('.flag-trigger').forEach(trigger => {
+        // Update Reference Display
+        const refContainer = document.getElementById('currentValueContainer');
+        const refText = document.getElementById('currentValueText');
+
+        if (currentText && currentText !== "") {
+            refText.innerText = currentText;
+            refContainer.style.display = 'block';
+        } else {
+            refContainer.style.display = 'none';
+        }
+    });
+});
+
+    // Locate your flag-trigger listener in the <script> tag
+document.querySelectorAll('.flag-trigger').forEach(trigger => {
     trigger.addEventListener('click', function() {
         const workId = this.getAttribute('data-work-id');
         const workTitle = this.getAttribute('data-work-title');
         
+        // --- NEW LOGIC: Capture the type from the trigger ---
+        const targetType = this.getAttribute('data-target-type'); 
+        
         // Populate the modal fields
         document.getElementById('flagWorkId').value = workId;
         document.getElementById('flagWorkTitle').innerText = workTitle;
+        
+        // Set the hidden type field for the controller
+        document.getElementById('flagTargetType').value = targetType; 
     });
 });
 });
@@ -571,24 +617,29 @@ document.addEventListener("DOMContentLoaded", function() {
             </div>
             <form action="index.php?action=submit_suggestion" method="POST">
                 <div class="modal-body p-4">
-                    <input type="hidden" name="manuscript_id" value="<?php echo $data['manuscript']['id']; ?>">
-                    <input type="hidden" name="field_name" id="modalFieldName">
-                    
-                    <div class="mb-3">
-                        <p class="text-muted small">You are contributing missing information for the field:</p>
-                        <h6 id="displayFieldName" class="fw-bold text-dark text-uppercase" style="letter-spacing: 1px;"></h6>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="info-label d-block">Your Suggestion</label>
-                        <textarea name="suggested_value" id="suggestionInput" class="form-control" rows="5" required placeholder="Describe the genre, language, or content based on your research..."></textarea>
-                    </div>
-                    
-                    <div class="alert alert-info border-0 shadow-sm d-flex align-items-center mb-0" style="background-color: #e7f3ff;">
-                        <i class="bi bi-info-circle-fill me-2 fs-5 text-primary"></i>
-                        <small class="text-dark">Your contribution will be reviewed by an expert. Once approved, it will be permanently added to the ManuHub catalogue.</small>
-                    </div>
-                </div>
+    <input type="hidden" name="manuscript_id" value="<?php echo $data['manuscript']['id']; ?>">
+    <input type="hidden" name="field_name" id="modalFieldName">
+    
+    <div class="mb-3">
+        <p class="text-muted small mb-1">You are contributing information for:</p>
+        <h6 id="displayFieldName" class="fw-bold text-dark text-uppercase" style="letter-spacing: 1px;"></h6>
+    </div>
+
+    <div id="currentValueContainer" class="mb-3 p-2 rounded border" style="background-color: #f8f9fa; display: none;">
+        <label class="info-label" style="font-size: 0.65rem; color: #666;">Current Record:</label>
+        <div id="currentValueText" class="small fw-bold text-muted"></div>
+    </div>
+    
+    <div class="mb-3">
+        <label class="info-label d-block">Your Suggestion</label>
+        <textarea name="suggested_value" id="suggestionInput" class="form-control" rows="5" required placeholder="Enter the corrected or missing information..."></textarea>
+    </div>
+    
+    <div class="alert alert-info border-0 shadow-sm d-flex align-items-center mb-0" style="background-color: #e7f3ff;">
+        <i class="bi bi-info-circle-fill me-2 fs-5 text-primary"></i>
+        <small class="text-dark">Your contribution will be reviewed by an expert before being updated in the live catalogue.</small>
+    </div>
+</div>
                 <div class="modal-footer border-0 py-3" style="background-color: #f8f9fa;">
                     <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-gold rounded-pill px-4">Submit Suggestion</button>
@@ -641,6 +692,8 @@ document.addEventListener("DOMContentLoaded", function() {
                 <div class="modal-body p-4">
                     <input type="hidden" name="work_id" id="flagWorkId">
                     <input type="hidden" name="manuscript_id" value="<?php echo $data['manuscript']['id']; ?>">
+
+                    <input type="hidden" name="target_type" id="flagTargetType">
                     
                     <p class="small text-muted mb-3">You are reporting: <br><strong id="flagWorkTitle" class="text-dark"></strong></p>
                     

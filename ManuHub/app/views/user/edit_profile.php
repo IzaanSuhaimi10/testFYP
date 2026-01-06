@@ -76,51 +76,24 @@
 <body>
 
     <div class="sidebar">
-    <div class="brand">
-        <div class="brand-logo"><i class="bi bi-book-half"></i></div>
-        MANUHUB
+        <div class="brand">
+            <div class="brand-logo"><i class="bi bi-book-half"></i></div>
+            MANUHUB
+        </div>
+        
+        <?php $current_action = $_GET['action'] ?? ''; ?>
+        <a href="index.php?action=user_dashboard" class="menu-item active"><i class="bi bi-grid-fill"></i> Dashboard</a>
+        <a href="index.php?action=my_manuscripts" class="menu-item"><i class="bi bi-file-earmark-text"></i> My Manuscripts</a>
+        <a href="index.php?action=my_suggestions" class="menu-item"><i class="bi bi-pencil-square"></i> My Edits</a>
+        <a href="index.php?action=my_sources" class="menu-item"><i class="bi bi-link-45deg"></i> My Sources</a>
+        <a href="index.php?action=my_flags" class="menu-item"><i class="bi bi-flag-fill"></i> My Flags</a>
+        <div style="border-top: 1px solid #eee; margin: 15px 0;"></div>
+        <a href="index.php?action=submit_manuscript" class="menu-item"><i class="bi bi-plus-square-fill"></i> Submit New</a>
+        <a href="index.php?action=user_edit_profile" class="menu-item"><i class="bi bi-person-circle"></i> My Profile</a>
+        <a href="index.php" class="menu-item"><i class="bi bi-house"></i> Home Page</a>
+        <a href="index.php?action=logout" class="menu-item" style="margin-top: auto; color: #c0392b;"><i class="bi bi-box-arrow-left"></i> Logout</a>
     </div>
-    
-    <?php $current_action = $_GET['action'] ?? ''; ?>
 
-    <a href="index.php?action=user_dashboard" class="menu-item <?php echo ($current_action == 'user_dashboard') ? 'active' : ''; ?>">
-        <i class="bi bi-grid-fill"></i> Dashboard
-    </a>
-
-    <a href="index.php?action=my_manuscripts" class="menu-item <?php echo ($current_action == 'my_manuscripts') ? 'active' : ''; ?>">
-        <i class="bi bi-file-earmark-text"></i> My Manuscripts
-    </a>
-
-    <a href="index.php?action=my_suggestions" class="menu-item <?php echo ($current_action == 'my_suggestions') ? 'active' : ''; ?>">
-        <i class="bi bi-pencil-square"></i> My Edits
-    </a>
-
-    <a href="index.php?action=my_sources" class="menu-item <?php echo ($current_action == 'my_sources') ? 'active' : ''; ?>">
-        <i class="bi bi-link-45deg"></i> My Sources
-    </a>
-
-    <a href="index.php?action=my_flags" class="menu-item <?php echo ($current_action == 'my_flags') ? 'active' : ''; ?>">
-        <i class="bi bi-flag-fill"></i> My Flags
-    </a>
-
-    <div style="border-top: 1px solid #eee; margin: 15px 0;"></div>
-
-    <a href="index.php?action=submit_manuscript" class="menu-item <?php echo ($current_action == 'submit_manuscript') ? 'active' : ''; ?>">
-        <i class="bi bi-plus-square-fill"></i> Submit New
-    </a>
-    
-    <a href="index.php?action=user_edit_profile" class="menu-item <?php echo ($current_action == 'user_edit_profile') ? 'active' : ''; ?>">
-        <i class="bi bi-person-circle"></i> My Profile
-    </a>
-
-    <a href="index.php" class="menu-item">
-        <i class="bi bi-house"></i> Home Page
-    </a>
-    
-    <a href="index.php?action=logout" class="menu-item" style="margin-top: auto; color: #c0392b;">
-        <i class="bi bi-box-arrow-left"></i> Logout
-    </a>
-</div>
 
     <div class="main-content">
         

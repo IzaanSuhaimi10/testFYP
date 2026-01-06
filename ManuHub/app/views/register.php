@@ -69,6 +69,38 @@
                                 </div>
                             </div>
 
+                            <div class="col-12">
+    <label class="form-label">Reason for joining ManuHub</label>
+    <div class="p-3 border rounded bg-white">
+        <div class="form-check mb-2">
+            <input class="form-check-input" type="radio" name="join_reason_type" id="reason1" value="I want to be a researcher" checked onclick="toggleOther(false)">
+            <label class="form-check-label small" for="reason1">I want to be a researcher</label>
+        </div>
+        <div class="form-check mb-2">
+            <input class="form-check-input" type="radio" name="join_reason_type" id="reason2" value="Want to contribute to metadata completion" onclick="toggleOther(false)">
+            <label class="form-check-label small" for="reason2">Want to contribute to metadata completion</label>
+        </div>
+        <div class="form-check mb-2">
+            <input class="form-check-input" type="radio" name="join_reason_type" id="reason3" value="Reference for my own research" onclick="toggleOther(false)">
+            <label class="form-check-label small" for="reason3">Reference for my own research</label>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="join_reason_type" id="reason4" value="Other" onclick="toggleOther(true)">
+            <label class="form-check-label small" for="reason4">Other</label>
+        </div>
+        
+        <div id="other_reason_container" class="mt-2" style="display: none;">
+            <textarea name="other_reason_text" class="form-control form-control-sm" placeholder="Please specify your reason..."></textarea>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleOther(show) {
+        document.getElementById('other_reason_container').style.display = show ? 'block' : 'none';
+    }
+</script>
+
                             <div class="col-md-6">
                                 <label class="form-label">Password</label>
                                 <input type="password" name="password" class="form-control" required placeholder="8-16 chars">

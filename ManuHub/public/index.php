@@ -200,6 +200,11 @@ case 'expert_approve_user':
     $expert = new ExpertController();
     $expert->approveUser();
     break;
+
+case 'expert_process_user_verifications':
+    $expert = new ExpertController();
+    $expert->processUserVerifications(); 
+    break;
   
     default:
         $controller->index();
